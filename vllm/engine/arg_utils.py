@@ -32,6 +32,7 @@ class EngineArgs:
     load_format: str = 'auto'
     dtype: str = 'auto'
     kv_cache_dtype: str = 'auto'
+    cla_factor: int = 1
     quantization_param_path: Optional[str] = None
     seed: int = 0
     max_model_len: Optional[int] = None
@@ -620,6 +621,13 @@ class EngineArgs:
             type=str,
             default=None,
             help='Target URL to which OpenTelemetry traces will be sent.')
+        
+        parser.add_argument(
+            "--cla_factor",
+            default=1,
+            type=int,
+            help="Cross-Layer Attention factor. cla_factor=1 uses 1 KV cache per layer. cla_factor=2 shares single KV cache across 2 layers."
+        )
 
         return parser
 
@@ -632,7 +640,6 @@ class EngineArgs:
         return engine_args
 
     def create_engine_config(self, ) -> EngineConfig:
-
         # bitsandbytes quantization needs a specific model loader
         # so we make sure the quant method and the load format are consistent
         if (self.quantization == "bitsandbytes" or
@@ -680,6 +687,7 @@ class EngineArgs:
             served_model_name=self.served_model_name,
             multimodal_config=multimodal_config)
         cache_config = CacheConfig(
+            cla_factor=self.cla_factor,
             block_size=self.block_size,
             gpu_memory_utilization=self.gpu_memory_utilization,
             swap_space=self.swap_space,
